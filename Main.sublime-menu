@@ -1,0 +1,21 @@
+[
+    {
+        "id": "tools",
+        "children":
+        [
+            {
+                "caption": "Collaboration",
+                "children":
+                [
+                    { "caption": "Share This File...", "command": "collab_start", "args": {"new": true, "custom": false}},
+                    { "caption": "Share New File...", "command": "collab_start", "args": {"new": false, "custom": false}},
+                    { "caption": "-" },
+                    { "caption": "Start Server", "command": "collab_server", "args": {"start": true}},
+                    { "caption": "Stop Server", "command": "collab_server", "args": {"start": false}},
+                    { "caption": "-" },
+                    { "caption": "Active Collaborations...", "command": "collab_list" }
+                ]
+            }
+        ]
+    }
+]

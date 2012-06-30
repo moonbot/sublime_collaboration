@@ -26,7 +26,10 @@
 		}
 	],
 
-	// The default port connections
+	// The name for representing this host
+	"name": "Bo",
+
+	// The default port for this host
 	"port": 22000
 
 }

@@ -1,5 +1,6 @@
 [
 
+	// start or stop the local collaboration server
 	{ "keys": ["super+ctrl+r"], "command": "collab_server", "args": {"start": true}},
 	{ "keys": ["super+ctrl+shift+r"], "command": "collab_server", "args": {"start": false}},
 	
