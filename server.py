@@ -5,10 +5,11 @@ import socket
 import sys
 import threading
 
+
 class Server:
 	def __init__(self):
 		self.host = ''
-		self.port = 50000
+		self.port = 22000
 		self.backlog = 5
 		self.size = 1024
 		self.server = None
@@ -66,13 +67,17 @@ class Client(threading.Thread):
 	def run(self):
 		running = 1
 		while running:
-			data = self.client.recv(self.size)
-			if data:
+			datastr = self.client.recv(self.size)
+			if datastr:
+				data = eval(datastr)
 				print('received: {0!r}'.format(data))
-				self.client.send(data)
+				response = {'type':'start', 'accept':1}
+				# TODO: process data
+				self.client.send(str(response))
 			else:
 				self.client.close()
 				running = 0
+
 
 if __name__ == "__main__":
 	s = Server()

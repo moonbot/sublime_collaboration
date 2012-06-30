@@ -24,6 +24,9 @@
 			"name":"Nolan Baker",
 			"host":"nolan-mac"
 		}
-	]
-	
+	],
+
+	// The default port connections
+	"port": 22000
+
 }
