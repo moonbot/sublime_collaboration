@@ -1,0 +1,29 @@
+{
+	
+	// List all collaborator names and host ids
+	// for use with the collaborators quick access menu
+	"collaborators":
+	[
+		{
+			"name":"Bohdon Sayre",
+			"host":"localhost"
+		},
+		{
+			"name":"Bohdon Sayre",
+			"host":"bo-pc"
+		},
+		{
+			"name":"Chris Lewis",
+			"host":"chris-mac"
+		},
+		{
+			"name":"John Cannon",
+			"host":"cannon-mac"
+		},
+		{
+			"name":"Nolan Baker",
+			"host":"nolan-mac"
+		}
+	]
+	
+}

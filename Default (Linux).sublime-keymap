@@ -1,0 +1,11 @@
+[
+	
+	// collaborate on new file with listed or custom host
+	{ "keys": ["alt+ctrl+n"], "command": "collab_start", "args": {"new": true, "custom": false} },
+	{ "keys": ["alt+ctrl+shift+n"], "command": "collab_start", "args": {"new": true, "custom": true} },
+
+	// collaborate on active file with listed or custom host
+	{ "keys": ["alt+ctrl+c"], "command": "collab_start", "args": {"new": false, "custom": false} },
+	{ "keys": ["alt+ctrl+shift+c"], "command": "collab_start", "args": {"new": false, "custom": true} }
+	
+]
