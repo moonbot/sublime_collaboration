@@ -63,6 +63,9 @@ class CollabStartCommand(sublime_plugin.WindowCommand):
     """
 
     def run(self, new=False, custom=False):
+        if not Server.get():
+            sublime.message_dialog('Collaboration server must be started first.')
+            return
         self.new = new
         if custom:
             self.window.show_input_panel("Collaborate with:", "", self.start_custom, None, None)
@@ -101,10 +104,6 @@ class CollabStartCommand(sublime_plugin.WindowCommand):
             v = w.new_file()
         c = Collaboration(v, host, port, name)
         c.start()
-        # show message
-        # ensure server is started
-        # TODO: ---
-        # call out for response
 
 
 class CollabServerCommand(sublime_plugin.ApplicationCommand):
@@ -120,10 +119,13 @@ class CollabEventListener(sublime_plugin.EventListener):
         Collaboration.kill(view.id())
 
     def on_selection_modified(self, view):
-        if view.id() == sublime.active_window().active_view().id():
-            c = Collaboration.get(view.id())
-            if c:
-                c.send_command(view.command_history(0, True), view.sel())
+        w = sublime.active_window()
+        if w:
+            v = w.active_view()
+            if view.id() == v.id():
+                c = Collaboration.get(view.id())
+                if c:
+                    c.send_command(view.command_history(0, True), view.sel())
 
 
 
@@ -390,7 +392,10 @@ class Collaboration(Collaborator):
         sel = data['sel']
         print(cmd, args, sel)
         self.view.run_command(cmd, args)
-        # TODO: handle selection changes....
+        if sel is not None:
+            self.view.sel().clear()
+            for s in sel:
+                self.view.sel().add(sublime.Region(*s))
 
     def send_data(self, data):
         data = data.copy()
@@ -524,6 +529,7 @@ class Server(object):
         if self.quit:
             print('waiting for threads to finish...')
             for c in self.threads:
+                c.running = False
                 c.join()
             self.close()
             return
@@ -546,26 +552,6 @@ class Server(object):
             Collaboration.recv(data)
 
 
-class ServerListener(threading.Thread):
-    def __init__(self, server):
-        threading.Thread.__init__(self)
-        self.server = server
-
-    def run(self):
-        run = True
-        while run:
-            inputready,outputready,exceptready = select.select(input,[],[])
-
-            for s in inputready:
-                if s == self.server:
-                    # handle the server socket
-                    c = Client(self.server.accept())
-                    c.start()
-                    self.threads.append(c)
-
-        main_thread(Server.stop)
-
-
 class ClientReceiver(threading.Thread):
     def __init__(self, (client, address), size=DEFAULT_SIZE): 
         threading.Thread.__init__(self)
@@ -580,11 +566,9 @@ class ClientReceiver(threading.Thread):
             self.data = self.client.recv(self.size)
             if self.data:
                 main_thread(Server.recv, self.data)
-                # rspdata = {}
-                # self.client.send(str(rspdata))
             else:
                 self.running = False
-                self.client.close()
+        self.client.close()
                 
 
 
@@ -606,7 +590,6 @@ class ClientMessage(threading.Thread):
         try:
             datastr = str(self.data)
             self.socket.send(datastr)
-            # self.response = self.socket.recv(self.size)
             self.success = True
         except Exception as e:
             self.error = e
