@@ -263,6 +263,7 @@ class Collaboration(Collaborator):
         self.isPending = True
         self.socket = None
         self.isDead = False
+        self._lastchars = ''
         print('created collaboration: {0}'.format(self))
         Collaboration.register(self)
 
@@ -384,6 +385,15 @@ class Collaboration(Collaborator):
 
     def send_command(self, cmd, sel=None):
         data = dict( type='cmd', cmd=cmd[0], args=cmd[1], sel=sel )
+        print(data['cmd'], data['args'])
+        if data['cmd'] == 'insert' and data['args'].has_key('characters'):
+            thesechars = data['args']['characters']
+            # trim last characters
+            if len(self._lastchars):
+                if len(self._lastchars) == len(thesechars) - 1:
+                    data['args']['characters'] = thesechars[-1]
+            self._lastchars = thesechars
+            print('{0} -> {1}'.format(thesechars, data['args']['characters']))
         self.send_data(data)
 
     def recv_command(self, data):
