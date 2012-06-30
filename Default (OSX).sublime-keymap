@@ -1,4 +1,7 @@
 [
+
+	{ "keys": ["super+ctrl+r"], "command": "collab_server", "args": {"start": true}},
+	{ "keys": ["super+ctrl+shift+r"], "command": "collab_server", "args": {"start": false}},
 	
 	// collaborate on new file with listed or custom host
 	{ "keys": ["super+ctrl+n"], "command": "collab_start", "args": {"new": true, "custom": false} },

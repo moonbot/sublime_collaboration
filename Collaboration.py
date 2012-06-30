@@ -1,5 +1,6 @@
 
 import os
+import select
 import socket
 import sublime
 import sublime_plugin
@@ -75,7 +76,7 @@ class CollabStartCommand(sublime_plugin.WindowCommand):
         split = hoststr.split(':')
         host = split[0].strip()
         if len(split) > 1:
-            port = split[1].strip()
+            port = int(split[1].strip())
         else:
             port = self.port()
         self.start(host, port)
@@ -94,10 +95,19 @@ class CollabStartCommand(sublime_plugin.WindowCommand):
         # call out for response
 
 
+class CollabServerCommand(sublime_plugin.ApplicationCommand):
+    def run(self, start=True):
+        if start:
+            Server.start()
+        else:
+            Server.stop()
+
+
 class CollabEventListener(sublime_plugin.EventListener):
     def on_selection_modified(self, view):
-        #view.run_command('collab_client_send')
-        pass
+        c = Collaboration.getInstance(view.id())
+        if c:
+            c.send_command(view.command_history(0, True))
 
 
 
@@ -133,6 +143,15 @@ class Collaboration(Collaborator):
     def register(collab):
         Collaboration.instances[collab.view.id()] = collab
 
+    @staticmethod
+    def getInstance(id):
+        if Collaboration.instances.has_key(id):
+            c = Collaboration.instances[id]
+            if c.isDead:
+                del Collaboration.instances[id]
+            else:
+                return c
+
     def __init__(self, host, port, view, name=None):
         self.view = view
         self.host = host
@@ -152,8 +171,11 @@ class Collaboration(Collaborator):
             self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.socket.connect((self.host, self.port))
         except socket.error, (value, self.message):
+            sublime.status_message('Collaboration Error: {0}'.format(self.message))
             self.close()
             self.isDead = True
+        else:
+            print('collaboration socket connected: {0}'.format(self.host))
 
     def close(self):
         """
@@ -170,7 +192,8 @@ class Collaboration(Collaborator):
         If the collaboration is refused it will be removed.
         """
         self.connect()
-        self.request_start()
+        if not self.isDead:
+            self.request_start()
 
     def request_start(self):
         data = dict(
@@ -227,7 +250,6 @@ class Collaboration(Collaborator):
                 Collaboration.register(self)
 
 
-
 class ClientMessage(threading.Thread):
     def __init__(self, socket, data, timeout):
         self.socket = socket
@@ -250,4 +272,100 @@ class ClientMessage(threading.Thread):
             self.result = False
 
 
+
+class Server(object):
+    instance = None
+
+    @staticmethod
+    def start():
+        if Server.instance is None:
+            s = Server()
+            s.run()
+            Server.instance = s
+
+    @staticmethod
+    def stop():
+        if Server.instance is not None:
+            Server.instance.quit = True
+            Server.instance = None
+
+
+    def __init__(self):
+        self.host = ''
+        self.port = DEFAULT_PORT
+        self.backlog = 5
+        self.size = 1024
+        self.server = None
+        self.quit = False
+        self.threads = []
+
+    def open(self):
+        try:
+            self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.server.bind((self.host, self.port))
+            self.server.listen(5)
+        except socket.error, (value,message):
+            self.close()
+            print "could not open socket: " + message
+        else:
+            print('server started: {0}'.format(self.server.getsockname()))
+
+    def close(self):
+        if self.server:
+            self.server.close()
+            print('server stopped')
+        self.server = None
+
+    def run(self):
+        print('server running')
+        self.open()
+        if self.server:
+            self.receive_input()
+
+    def receive_input(self):
+        inputready,outputready,exceptready = select.select([self.server],[],[], 0.1)
+
+        for s in inputready:
+            if s == self.server:
+                print('receiving data')
+                # handle the server socket
+                c = Client(self.server.accept())
+                c.start()
+                self.threads.append(c)
+
+        for t in self.threads:
+            if not t.is_alive():
+                t.join()
+
+        if self.quit:
+            print('stopping server, waiting for threads.')
+            for c in self.threads:
+                c.join()
+            self.close()
+            return
+
+        sublime.set_timeout(self.receive_input, 500)
+
+
+class Client(threading.Thread): 
+    def __init__(self, (client, address)): 
+        threading.Thread.__init__(self)
+        self.client = client
+        self.address = address
+        self.data = None
+        self.size = 1024
+
+    def run(self):
+        running = 1
+        while running:
+            datastr = self.client.recv(self.size)
+            if datastr:
+                self.data = eval(datastr)
+                print('received: {0!r}'.format(self.data))
+                if self.data['type'] == 'start':
+                    response = {'type':'start', 'accept':1}
+                    self.client.send(str(response))
+            else:
+                self.client.close()
+                running = 0
 
