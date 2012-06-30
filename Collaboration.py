@@ -120,9 +120,10 @@ class CollabEventListener(sublime_plugin.EventListener):
         Collaboration.kill(view.id())
 
     def on_selection_modified(self, view):
-        c = Collaboration.get(view.id())
-        if c:
-            c.send_command(view.command_history(0, True), view.sel())
+        if view.id() == sublime.active_window().active_view().id():
+            c = Collaboration.get(view.id())
+            if c:
+                c.send_command(view.command_history(0, True), view.sel())
 
 
 
@@ -388,7 +389,7 @@ class Collaboration(Collaborator):
         args = data['args']
         sel = data['sel']
         print(cmd, args, sel)
-        #self.view.run_command(cmd, args)
+        self.view.run_command(cmd, args)
         # TODO: handle selection changes....
 
     def send_data(self, data):
@@ -572,13 +573,18 @@ class ClientReceiver(threading.Thread):
         self.address = address
         self.size = size
         self.data = None
+        self.running = True
 
     def run(self):
-        self.data = self.client.recv(self.size)
-        main_thread(Server.recv, self.data)
-        # rspdata = {}
-        # self.client.send(str(rspdata))
-        self.client.close()
+        while self.running:
+            self.data = self.client.recv(self.size)
+            if self.data:
+                main_thread(Server.recv, self.data)
+                # rspdata = {}
+                # self.client.send(str(rspdata))
+            else:
+                self.running = False
+                self.client.close()
                 
 
 
@@ -599,8 +605,7 @@ class ClientMessage(threading.Thread):
             return
         try:
             datastr = str(self.data)
-            if self.data['type'] != 'cmd':
-                self.socket.send(datastr)
+            self.socket.send(datastr)
             # self.response = self.socket.recv(self.size)
             self.success = True
         except Exception as e:
